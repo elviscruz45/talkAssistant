@@ -43,7 +43,7 @@ export const useVoiceRecognition = () => {
   const startRecognizing = useCallback(async () => {
     resetState();
     try {
-      await Voice.start("en-US");
+      await Voice.start("es-MX");
     } catch (e) {
       console.error(e);
     }

@@ -1,5 +1,12 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, Button, Pressable } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  Pressable,
+  SafeAreaView,
+} from "react-native";
 import React, { useEffect, useState } from "react";
 import { useVoiceRecognition } from "./hooks/useVoiceRecognition";
 import * as FileSystem from "expo-file-system";
@@ -7,7 +14,9 @@ import { Audio } from "expo-av";
 import { writeAudioToFile } from "./utils/writeAudioToFile";
 import { playFromPath } from "./utils/playFromPath";
 import { fetchAudio } from "./utils/fetchAudio";
-
+import { Image } from "expo-image";
+import Sound from "react-native-sound";
+import axios from "axios";
 Audio.setAudioModeAsync({
   allowsRecordingIOS: false,
   staysActiveInBackground: false,
@@ -23,7 +32,12 @@ export default function App() {
   const { state, startRecognizing, stopRecognizing, destroyRecognizer } =
     useVoiceRecognition();
   const [urlPath, setUrlPath] = useState("");
+  const [sourceId, setSourceId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activatePDFChat, setActivatePDFChat] = useState(false);
 
+  console.log("sourceId", sourceId);
   const listFiles = async () => {
     try {
       const result = await FileSystem.readDirectoryAsync(
@@ -39,11 +53,36 @@ export default function App() {
       console.error("An error occurred while listing the files:", error);
     }
   };
+  const analizarReporte = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.post(
+        "https://api.chatpdf.com/v1/sources/add-url",
+        // { url: prueba },
+        {
+          url: "https://firebasestorage.googleapis.com/v0/b/finant-dd645.appspot.com/o/INFORME%20MANTENIMIENTO.pdf?alt=media&token=0b3302db-f630-4e52-8a6f-bedf84a15d07",
+        },
+
+        {
+          headers: {
+            "x-api-key": "sec_CGNMZENbOBE46FZvWlGfmGCLoqy9vgiI", // Replace with your actual API key
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setSourceId(response.data.sourceId);
+      setActivatePDFChat(true);
+    } catch (error: any) {
+      console.error("Error adding PDF:", error);
+    }
+  };
   const handleSubmit = async () => {
     if (!state.results[0]) return;
     try {
       // Fetch the audio blob from the server
-      const audioBlob = await fetchAudio(state.results[0]);
+      const audioBlob = await fetchAudio(sourceId, state.results[0]);
 
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -53,8 +92,7 @@ export default function App() {
 
           // Write the audio data to a local file
           const path = await writeAudioToFile(audioData);
-          //play audio
-          setUrlPath(path);
+
           await playFromPath(path);
           destroyRecognizer();
         }
@@ -66,52 +104,70 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={{ fontSize: 32, fontWeight: "bold", marginBottom: 30 }}>
-        Talk GPT 🤖
-      </Text>
-      <Text style={styles.instructions}>{JSON.stringify(state, null, 2)}</Text>
-      <Text>
-        Press and hold this button to record your voice. Release the button to
-        send the recording, and you'll hear a response
-      </Text>
+    <SafeAreaView style={styles.container1}>
+      <View style={styles.container1}>
+        <Text style={{ fontSize: 22, fontWeight: "bold" }}>
+          Asistente de gerencia:
+        </Text>
+        <Text style={{ fontSize: 20, marginBottom: 10 }}>Sr Roby Husky</Text>
+        <Text style={{ fontSize: 20, marginBottom: 30 }}></Text>
 
-      <Text style={styles.welcome}>Your message:</Text>
+        <Image
+          source={require("./assets/huskyLogo.png")}
+          style={{
+            // marginLeft: 20,
+            width: 152,
+            height: 180,
+            borderRadius: 20,
+            // borderWidth: 0.3,
+          }}
+        />
+        {/* <Text style={styles.instructions}>
+          {JSON.stringify(state, null, 2)}
+        </Text> */}
+        <Text style={{ fontSize: 20, marginBottom: 10 }}></Text>
 
-      {/* <Text style={styles.welcome}>Your message: "{state.results[0]}"</Text> */}
-      {/* <Pressable>
+        <Text style={styles.welcome}>Tu mensaje: "{state.results[0]}"</Text>
+
+        {/* <Pressable>
         <Text style={styles.welcome}>
           {state.isRecording ? "Release to Send" : "Hold to Speak"}
         </Text>
         <Image style={styles.button} source={require("./assets/button.png")} />
       </Pressable>*/}
-      <Pressable
-        onPressIn={() => {
-          setBorderColor("lightgreen");
-          startRecognizing();
-        }}
-        onPressOut={() => {
-          setBorderColor("lightgray");
-          stopRecognizing();
-          handleSubmit();
-        }}
-        style={{
-          width: "90%",
-          padding: 30,
-          gap: 10,
-          borderWidth: 3,
-          alignItems: "center",
-          borderRadius: 10,
-          borderColor: borderColor,
-        }}
-      >
-        <Text>Hold to speak</Text>
-      </Pressable>
-      <Button
-        title="Replay last message"
-        onPress={async () => await playFromPath(urlPath)}
-      />
-    </View>
+        <Pressable
+          onPressIn={() => {
+            setBorderColor("lightgreen");
+            startRecognizing();
+          }}
+          onPressOut={() => {
+            setBorderColor("lightgray");
+            stopRecognizing();
+            handleSubmit();
+          }}
+          style={{
+            width: "90%",
+            padding: 30,
+            gap: 10,
+            borderWidth: 3,
+            alignItems: "center",
+            borderRadius: 10,
+            borderColor: borderColor,
+          }}
+        >
+          <Text>Manten Presionado para preguntar</Text>
+        </Pressable>
+        <Text style={{ fontSize: 20, marginBottom: 30 }}></Text>
+        <Button
+          title="Analizar Reporte"
+          onPress={async () => await analizarReporte()}
+        />
+        <Button
+          title="Repite la respuesta"
+          onPress={async () => await playFromPath(urlPath)}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -126,6 +182,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F5FCFF",
     padding: 20,
+  },
+  container1: {
+    flex: 1,
+    paddingTop: 20,
+    // justifyContent: "center",
+    alignItems: "center",
   },
   welcome: {
     fontSize: 20,
@@ -142,7 +204,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#333333",
     marginBottom: 5,
-    fontSize: 20,
+    fontSize: 15,
   },
   stat: {
     textAlign: "center",

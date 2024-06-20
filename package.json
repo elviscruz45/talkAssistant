@@ -10,12 +10,16 @@
   },
   "dependencies": {
     "@react-native-voice/voice": "^3.2.4",
+    "axios": "^1.7.2",
     "expo": "~51.0.14",
     "expo-av": "^14.0.5",
     "expo-file-system": "^17.0.1",
+    "expo-image": "^1.12.12",
     "expo-status-bar": "~1.12.1",
+    "firebase": "^10.12.2",
     "react": "18.2.0",
-    "react-native": "0.74.2"
+    "react-native": "0.74.2",
+    "react-native-sound": "^0.11.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
